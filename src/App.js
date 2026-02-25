@@ -3,7 +3,6 @@ import {
   Zap, 
   Skull, 
   Settings, 
-  Play, 
   Cpu, 
   User
 } from 'lucide-react';
