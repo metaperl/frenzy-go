@@ -18,8 +18,8 @@ const AI_THINK_RATE = 1200;
 const App = () => {
   // Game State
   const [gameState, setGameState] = useState('MENU'); 
-  const [boardSize, setBoardSize] = useState(9);
-  const fogOfWar = false; // Changed to constant as setter was unused
+  const [boardSize, setBoardSize] = useState(5); // Default 5x5
+  const fogOfWar = false; 
   const [countdown, setCountdown] = useState(3);
   
   const [hud, setHud] = useState({
@@ -33,7 +33,7 @@ const App = () => {
 
   const [winner, setWinner] = useState(null);
 
-  // High-performance Refs
+  // Refs for performance and game loop management
   const boardRef = useRef([]); 
   const energyRef = useRef({ player: 100, ai: 100 });
   const captureRef = useRef({ player: 0, ai: 0 });
@@ -127,11 +127,13 @@ const App = () => {
     const totalCells = boardSize * boardSize;
     const occupied = pStones + aStones;
 
-    if (pStones >= 10 && pStones >= aStones * 2) endGame('PLAYER_DOMINANCE');
-    else if (aStones >= 10 && aStones >= pStones * 2) endGame('AI_DOMINANCE');
+    // Victory conditions
+    if (pStones >= 5 && pStones >= aStones * 3) endGame('PLAYER_DOMINANCE');
+    else if (aStones >= 5 && aStones >= pStones * 3) endGame('AI_DOMINANCE');
     else if (occupied / totalCells >= 0.95) {
       if (pStones > aStones) endGame('PLAYER_POINTS');
-      else endGame('AI_POINTS');
+      else if (aStones > pStones) endGame('AI_POINTS');
+      else endGame('DRAW');
     }
   }, [boardSize, endGame]);
 
@@ -262,9 +264,11 @@ const App = () => {
 
             <button 
               onClick={initGame}
-              className="w-full py-5 bg-sky-500 hover:bg-sky-400 text-black font-black text-xl rounded-xl transition-all shadow-[0_0_20px_rgba(14,165,233,0.4)] flex items-center justify-center gap-2 uppercase"
+              className="group w-full py-5 bg-sky-500 hover:bg-white text-black font-black text-2xl rounded-xl transition-all shadow-[0_0_30px_rgba(14,165,233,0.3)] hover:shadow-[0_0_50px_rgba(255,255,255,0.2)] flex items-center justify-center gap-3 uppercase overflow-hidden relative"
             >
-              <Play fill="black" /> START SEQUENCE
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500" />
+              <Zap fill="black" className="group-hover:animate-bounce" /> 
+              ENGAGE COMBAT
             </button>
           </div>
         </div>
@@ -378,17 +382,44 @@ const App = () => {
       </div>
 
       {gameState === 'GAMEOVER' && (
-        <div className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-6">
-            <div className="text-center space-y-8">
-                <h2 className={`text-6xl font-black italic ${winner.startsWith('PLAYER') ? 'text-sky-500' : 'text-rose-500'}`}>
-                    {winner.startsWith('PLAYER') ? 'SYSTEM CLEAR' : 'CORE COLLAPSE'}
-                </h2>
-                <button 
-                    onClick={() => setGameState('MENU')}
-                    className="px-8 py-4 bg-white text-black font-black rounded-lg hover:bg-zinc-200 uppercase"
-                >
-                    Return to Menu
-                </button>
+        <div className="fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-6 backdrop-blur-md">
+            <div className="text-center space-y-8 max-w-lg w-full">
+                <div className="space-y-2">
+                    <h2 className={`text-7xl font-black italic tracking-tighter ${winner.startsWith('PLAYER') ? 'text-sky-500' : winner === 'DRAW' ? 'text-zinc-400' : 'text-rose-500'}`}>
+                        {winner.startsWith('PLAYER') ? 'VICTORY' : winner === 'DRAW' ? 'STALEMATE' : 'DEFEAT'}
+                    </h2>
+                    <p className="text-zinc-500 uppercase tracking-[0.3em] font-bold text-sm">
+                        {winner.startsWith('PLAYER') ? 'Operator wins' : winner === 'DRAW' ? 'Zero-sum outcome' : 'Core AI wins'}
+                    </p>
+                </div>
+                
+                <div className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-xl inline-block min-w-[300px]">
+                    <div className="text-xs text-zinc-500 uppercase mb-4">Final Analysis</div>
+                    <div className="grid grid-cols-2 gap-8">
+                        <div>
+                            <div className="text-sky-500 text-3xl font-black">{hud.playerStones}</div>
+                            <div className="text-[10px] text-zinc-500 uppercase">Operator Units</div>
+                        </div>
+                        <div>
+                            <div className="text-rose-500 text-3xl font-black">{hud.aiStones}</div>
+                            <div className="text-[10px] text-zinc-500 uppercase">Core Units</div>
+                        </div>
+                    </div>
+                    <div className="mt-6 pt-6 border-t border-zinc-800/50 text-zinc-400 text-xs italic">
+                        {winner.includes('DOMINANCE') ? 'Termination by board control dominance' : 
+                         winner.includes('POINTS') ? 'Resolution by territorial scoring' : 
+                         'Board saturation reached'}
+                    </div>
+                </div>
+
+                <div className="pt-4">
+                    <button 
+                        onClick={() => setGameState('MENU')}
+                        className="group relative px-12 py-5 bg-white text-black font-black rounded-lg hover:bg-sky-400 hover:text-white transition-all uppercase flex items-center justify-center mx-auto"
+                    >
+                        Initialize New Protocol
+                    </button>
+                </div>
             </div>
         </div>
       )}
