@@ -1,7 +1,7 @@
 {
   "name": "frenzy-go",
   "version": "0.1.0",
-  "homepage": "https://metaperl.github.io/frenzygo",
+  "homepage": "https://metaperl.github.io/frenzy-go",
 
 
   "private": true,
@@ -22,7 +22,7 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
-    
+
   },
   "eslintConfig": {
     "extends": [
