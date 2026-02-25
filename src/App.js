@@ -4,7 +4,10 @@ import {
   Skull, 
   Settings, 
   Cpu, 
-  User
+  User,
+  Info,
+  MousePointer2,
+  ShieldAlert
 } from 'lucide-react';
 
 // Constants
@@ -20,6 +23,7 @@ const App = () => {
   const [boardSize, setBoardSize] = useState(5); // Default 5x5
   const fogOfWar = false; 
   const [countdown, setCountdown] = useState(3);
+  const [showInstructions, setShowInstructions] = useState(false);
   
   const [hud, setHud] = useState({
     playerEnergy: 100,
@@ -237,38 +241,100 @@ const App = () => {
             <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,#0ea5e9,transparent_50%)] animate-pulse" />
         </div>
 
-        <div className="z-10 text-center max-w-lg w-full">
+        <div className="z-10 text-center max-w-2xl w-full">
           <h1 className="text-6xl font-black italic mb-2 tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-rose-500 to-sky-600">
             FRENZY GO
           </h1>
           <p className="text-zinc-500 mb-12 uppercase tracking-widest text-sm">Real-Time Hybrid Protocol // v2.5</p>
 
-          <div className="bg-[#1a1a1a] border border-zinc-800 p-8 rounded-2xl shadow-2xl space-y-8">
-            <div>
-              <label className="flex items-center gap-2 text-xs font-bold text-zinc-400 mb-4 uppercase">
-                <Settings size={14} /> Matrix Dimension
-              </label>
-              <div className="grid grid-cols-3 gap-3">
-                {[5, 9, 13, 19].map(size => (
-                  <button 
-                    key={size}
-                    onClick={() => setBoardSize(size)}
-                    className={`py-3 rounded-lg border transition-all ${boardSize === size ? 'bg-sky-500/10 border-sky-500 text-sky-400' : 'border-zinc-800 text-zinc-500 hover:border-zinc-600'}`}
-                  >
-                    {size}x{size}
-                  </button>
-                ))}
-              </div>
-            </div>
+          <div className="bg-[#1a1a1a] border border-zinc-800 p-8 rounded-2xl shadow-2xl space-y-8 text-left">
+            {!showInstructions ? (
+              <>
+                <div>
+                  <label className="flex items-center gap-2 text-xs font-bold text-zinc-400 mb-4 uppercase tracking-wider">
+                    <Settings size={14} /> Matrix Dimension
+                  </label>
+                  <div className="grid grid-cols-4 gap-3">
+                    {[5, 9, 13, 19].map(size => (
+                      <button 
+                        key={size}
+                        onClick={() => setBoardSize(size)}
+                        className={`py-3 rounded-lg border transition-all font-bold ${boardSize === size ? 'bg-sky-500/10 border-sky-500 text-sky-400 shadow-[0_0_15px_rgba(14,165,233,0.2)]' : 'border-zinc-800 text-zinc-500 hover:border-zinc-600'}`}
+                      >
+                        {size}x{size}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-            <button 
-              onClick={initGame}
-              className="group w-full py-5 bg-sky-500 hover:bg-white text-black font-black text-2xl rounded-xl transition-all shadow-[0_0_30px_rgba(14,165,233,0.3)] hover:shadow-[0_0_50px_rgba(255,255,255,0.2)] flex items-center justify-center gap-3 uppercase overflow-hidden relative"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500" />
-              <Zap fill="black" className="group-hover:animate-bounce" /> 
-              ENGAGE COMBAT
-            </button>
+                <div className="flex gap-4">
+                  <button 
+                    onClick={initGame}
+                    className="group flex-1 py-5 bg-sky-500 hover:bg-white text-black font-black text-2xl rounded-xl transition-all shadow-[0_0_30px_rgba(14,165,233,0.3)] hover:shadow-[0_0_50px_rgba(255,255,255,0.2)] flex items-center justify-center gap-3 uppercase overflow-hidden relative"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500" />
+                    <Zap fill="black" className="group-hover:animate-bounce" /> 
+                    ENGAGE COMBAT
+                  </button>
+                  <button 
+                    onClick={() => setShowInstructions(true)}
+                    className="w-20 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl flex items-center justify-center transition-colors border border-zinc-700"
+                    title="How to Play"
+                  >
+                    <Info size={28} />
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
+                  <h3 className="text-xl font-black italic text-sky-400 uppercase tracking-tighter flex items-center gap-2">
+                    <Info size={20} /> Combat Manual
+                  </h3>
+                  <button onClick={() => setShowInstructions(false)} className="text-zinc-500 hover:text-white text-xs font-bold uppercase tracking-widest underline decoration-sky-500 underline-offset-4">Return</button>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-[13px] leading-relaxed">
+                  <div className="space-y-4">
+                    <div className="flex gap-3">
+                      <div className="mt-1 text-sky-500"><MousePointer2 size={18} /></div>
+                      <div>
+                        <strong className="block text-zinc-300 uppercase mb-1">Real-Time Action</strong>
+                        This is not turn-based. Place stones as fast as your energy allows. Surrounding enemy groups captures them instantly.
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <div className="mt-1 text-sky-500"><Zap size={18} /></div>
+                      <div>
+                        <strong className="block text-zinc-300 uppercase mb-1">Energy Management</strong>
+                        Each move costs <span className="text-sky-400 font-bold">18 units</span>. Energy regenerates automatically. Don't spam or you'll be left defenseless.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex gap-3">
+                      <div className="mt-1 text-rose-500"><Skull size={18} /></div>
+                      <div>
+                        <strong className="block text-zinc-300 uppercase mb-1">Capture & Upgrade</strong>
+                        Capturing stones earns <span className="text-rose-400 font-bold">Soul Fragments</span>. Use them in the side panel to buy Surge or Sabotage.
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <div className="mt-1 text-sky-500"><ShieldAlert size={18} /></div>
+                      <div>
+                        <strong className="block text-zinc-300 uppercase mb-1">Victory Path</strong>
+                        Win by dominating the board (3x opponent's stones) or by having more territory when the board is 95% full.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-sky-500/5 border border-sky-500/20 p-4 rounded-lg text-xs text-sky-200/70 italic text-center">
+                  "Speed is a weapon. Territory is the objective."
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -335,9 +401,10 @@ const App = () => {
                 disabled={hud.playerCaptures < 10}
                 className={`w-full p-3 rounded-lg border text-left flex items-center justify-between ${hud.playerCaptures >= 10 ? 'border-sky-500/50 bg-sky-500/10' : 'border-zinc-800 opacity-30'}`}
             >
-                <div className="text-xs font-bold">ENERGY SURGE</div>
+                <div className="text-xs font-bold uppercase">Surge (+30 E)</div>
                 <Zap size={14} className="text-sky-400" />
             </button>
+            <div className="text-[9px] text-zinc-600 uppercase tracking-tighter">Cost: 10 Fragments</div>
         </div>
 
         <div className="flex-1 flex items-center justify-center p-4 lg:p-12">
