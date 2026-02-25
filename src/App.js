@@ -1,19 +1,11 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Zap, 
   Skull, 
-  Trophy, 
   Settings, 
   Play, 
-  RotateCcw, 
-  Info, 
   Cpu, 
-  User, 
-  Eye, 
-  EyeOff, 
-  AlertCircle,
-  TrendingUp, 
-  ShieldAlert
+  User
 } from 'lucide-react';
 
 // Constants
@@ -27,7 +19,7 @@ const App = () => {
   // Game State
   const [gameState, setGameState] = useState('MENU'); 
   const [boardSize, setBoardSize] = useState(9);
-  const [fogOfWar, setFogOfWar] = useState(false);
+  const fogOfWar = false; // Changed to constant as setter was unused
   const [countdown, setCountdown] = useState(3);
   
   const [hud, setHud] = useState({
@@ -40,7 +32,6 @@ const App = () => {
   });
 
   const [winner, setWinner] = useState(null);
-  const [showRules, setShowRules] = useState(false);
 
   // High-performance Refs
   const boardRef = useRef([]); 
@@ -97,7 +88,7 @@ const App = () => {
     return totalCaptured;
   };
 
-  const isMoveLegal = (x, y, board, size, color) => {
+  const isMoveLegal = useCallback((x, y, board, size, color) => {
     if (board[y][x] !== 0) return false;
     const tempBoard = board.map(row => [...row]);
     tempBoard[y][x] = color;
@@ -105,7 +96,14 @@ const App = () => {
     if (captured > 0) return true;
     const { libertyCount } = getLiberties(x, y, tempBoard, size);
     return libertyCount > 0;
-  };
+  }, []);
+
+  const endGame = useCallback((reason) => {
+    clearInterval(gameLoopRef.current);
+    clearInterval(aiLoopRef.current);
+    setWinner(reason);
+    setGameState('GAMEOVER');
+  }, []);
 
   // --- GAMEPLAY ACTIONS ---
   const updateHud = useCallback(() => {
@@ -135,9 +133,9 @@ const App = () => {
       if (pStones > aStones) endGame('PLAYER_POINTS');
       else endGame('AI_POINTS');
     }
-  }, [boardSize]);
+  }, [boardSize, endGame]);
 
-  const placeStone = (x, y, color) => {
+  const placeStone = useCallback((x, y, color) => {
     if (gameState !== 'PLAYING') return false;
     const energyKey = color === 1 ? 'player' : 'ai';
     if (energyRef.current[energyKey] < COST_PER_MOVE) return false;
@@ -152,7 +150,7 @@ const App = () => {
       return true;
     }
     return false;
-  };
+  }, [gameState, boardSize, isMoveLegal, updateHud]);
 
   const buyPowerUp = (type) => {
     if (type === 'SURGE' && hud.playerCaptures >= 10) {
@@ -171,14 +169,8 @@ const App = () => {
     energyRef.current = { player: 100, ai: 100 };
     captureRef.current = { player: 0, ai: 0 };
     setWinner(null);
+    setCountdown(3);
     setGameState('COUNTDOWN');
-  };
-
-  const endGame = (reason) => {
-    clearInterval(gameLoopRef.current);
-    clearInterval(aiLoopRef.current);
-    setWinner(reason);
-    setGameState('GAMEOVER');
   };
 
   useEffect(() => {
@@ -222,7 +214,7 @@ const App = () => {
         clearInterval(aiLoopRef.current);
       };
     }
-  }, [gameState, boardSize, updateHud]);
+  }, [gameState, boardSize, updateHud, isMoveLegal, placeStone]);
 
   const isVisible = (x, y) => {
     if (!fogOfWar) return true;
