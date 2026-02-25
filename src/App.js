@@ -41,7 +41,7 @@ const App = () => {
   const aiLoopRef = useRef(null);
 
   // --- GO ENGINE LOGIC ---
-  const getLiberties = (x, y, board, size) => {
+  const getLiberties = useCallback((x, y, board, size) => {
     const color = board[y][x];
     const visited = new Set();
     const group = [];
@@ -67,9 +67,9 @@ const App = () => {
       }
     }
     return { group, libertyCount: liberties.size };
-  };
+  }, []);
 
-  const processCaptures = (lastX, lastY, board, size, placingColor) => {
+  const processCaptures = useCallback((lastX, lastY, board, size, placingColor) => {
     const opponentColor = placingColor === 1 ? 2 : 1;
     const neighbors = [[lastX + 1, lastY], [lastX - 1, lastY], [lastX, lastY + 1], [lastX, lastY - 1]];
     let totalCaptured = 0;
@@ -86,7 +86,7 @@ const App = () => {
       }
     });
     return totalCaptured;
-  };
+  }, [getLiberties]);
 
   const isMoveLegal = useCallback((x, y, board, size, color) => {
     if (board[y][x] !== 0) return false;
@@ -96,7 +96,7 @@ const App = () => {
     if (captured > 0) return true;
     const { libertyCount } = getLiberties(x, y, tempBoard, size);
     return libertyCount > 0;
-  }, []);
+  }, [processCaptures, getLiberties]);
 
   const endGame = useCallback((reason) => {
     clearInterval(gameLoopRef.current);
@@ -150,7 +150,7 @@ const App = () => {
       return true;
     }
     return false;
-  }, [gameState, boardSize, isMoveLegal, updateHud]);
+  }, [gameState, boardSize, isMoveLegal, processCaptures, updateHud]);
 
   const buyPowerUp = (type) => {
     if (type === 'SURGE' && hud.playerCaptures >= 10) {
