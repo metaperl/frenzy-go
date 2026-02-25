@@ -13,9 +13,7 @@ import {
   EyeOff, 
   AlertCircle,
   TrendingUp, 
-  ShieldAlert,
-  Volume2,
-  VolumeX
+  ShieldAlert
 } from 'lucide-react';
 
 // Constants
@@ -25,73 +23,12 @@ const REGEN_RATE = 0.55;
 const TICK_RATE = 100; 
 const AI_THINK_RATE = 1200; 
 
-/** * AUDIO ASSETS CONFIGURATION
- * Assets are now pointing to your local .m4a files for GitHub deployment.
- */
-const AUDIO_ASSETS = {
-  OUT_OF_ENERGY: {
-    text: "Energy depleted, now recharging.",
-    url: "./assets/audio/energy-depleted.m4a", 
-  },
-  READY_TO_PLAY: {
-    text: "You can now go crazy. Let's do this!",
-    url: "./assets/audio/ready.m4a",
-  },
-  VICTORY: {
-    text: "Neural victory achieved. Excellence.",
-    url: "", // Add paths here if you record victory/defeat later
-  },
-  DEFEAT: {
-    text: "Core failure. Try harder next time.",
-    url: "",
-  }
-};
-
-// Audio Helper for PCM-to-WAV conversion (Fallback only)
-const playPCM = async (base64Data, sampleRate = 24000) => {
-  const binaryString = window.atob(base64Data);
-  const len = binaryString.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  const pcmData = new Int16Array(bytes.buffer);
-
-  const wavHeader = new ArrayBuffer(44);
-  const view = new DataView(wavHeader);
-  const writeString = (offset, string) => {
-    for (let i = 0; i < string.length; i++) {
-      view.setUint8(offset + i, string.charCodeAt(i));
-    }
-  };
-
-  writeString(0, 'RIFF');
-  view.setUint32(4, 32 + pcmData.length * 2, true);
-  writeString(8, 'WAVE');
-  writeString(12, 'fmt ');
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, 1, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * 2, true);
-  view.setUint16(32, 2, true);
-  view.setUint16(34, 16, true);
-  writeString(36, 'data');
-  view.setUint32(40, pcmData.length * 2, true);
-
-  const blob = new Blob([wavHeader, pcmData], { type: 'audio/wav' });
-  const url = URL.createObjectURL(blob);
-  const audio = new Audio(url);
-  await audio.play();
-};
-
 const App = () => {
   // Game State
   const [gameState, setGameState] = useState('MENU'); 
   const [boardSize, setBoardSize] = useState(9);
   const [fogOfWar, setFogOfWar] = useState(false);
   const [countdown, setCountdown] = useState(3);
-  const [isMuted, setIsMuted] = useState(false);
   
   const [hud, setHud] = useState({
     playerEnergy: 100,
@@ -111,59 +48,6 @@ const App = () => {
   const captureRef = useRef({ player: 0, ai: 0 });
   const gameLoopRef = useRef(null);
   const aiLoopRef = useRef(null);
-  const lastAudioRef = useRef({ outOfEnergy: false, ready: true });
-
-  // --- AUDIO SYSTEM (HYBRID) ---
-  const triggerAudio = async (assetKey) => {
-    if (isMuted) return;
-    const asset = AUDIO_ASSETS[assetKey];
-    if (!asset) return;
-
-    // 1. Try playing pre-recorded asset if URL exists
-    if (asset.url) {
-      try {
-        const audio = new Audio(asset.url);
-        // Ensure the audio is loaded and then play
-        audio.oncanplaythrough = async () => {
-           try { await audio.play(); } catch(e) { console.warn("Autoplay blocked or file error", e); }
-        };
-        // Trigger load
-        audio.load();
-        return; 
-      } catch (e) {
-        console.warn(`Pre-recorded asset failed for ${assetKey}, falling back to TTS.`);
-      }
-    }
-
-    // 2. Fallback to Gemini TTS Mockup
-    const apiKey = ""; // Provided by environment
-    if (!apiKey) return; 
-
-    try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: `Say in a cool robotic voice: ${asset.text}` }] }],
-          generationConfig: {
-            responseModalities: ["AUDIO"],
-            speechConfig: {
-              voiceConfig: {
-                prebuiltVoiceConfig: { voiceName: "Puck" } 
-              }
-            }
-          }
-        })
-      });
-      const data = await response.json();
-      const base64Audio = data.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-      if (base64Audio) {
-        await playPCM(base64Audio);
-      }
-    } catch (error) {
-      console.error("Audio Engine Error:", error);
-    }
-  };
 
   // --- GO ENGINE LOGIC ---
   const getLiberties = (x, y, board, size) => {
@@ -232,17 +116,6 @@ const App = () => {
     }));
 
     const pEnergy = energyRef.current.player;
-    
-    // Trigger Audio Events
-    if (pEnergy < COST_PER_MOVE && !lastAudioRef.current.outOfEnergy) {
-      lastAudioRef.current.outOfEnergy = true;
-      lastAudioRef.current.ready = false;
-      triggerAudio('OUT_OF_ENERGY');
-    } else if (pEnergy >= 85 && !lastAudioRef.current.ready) {
-      lastAudioRef.current.ready = true;
-      lastAudioRef.current.outOfEnergy = false;
-      triggerAudio('READY_TO_PLAY');
-    }
 
     setHud({
       playerEnergy: Math.floor(pEnergy),
@@ -262,7 +135,7 @@ const App = () => {
       if (pStones > aStones) endGame('PLAYER_POINTS');
       else endGame('AI_POINTS');
     }
-  }, [boardSize, isMuted]);
+  }, [boardSize]);
 
   const placeStone = (x, y, color) => {
     if (gameState !== 'PLAYING') return false;
@@ -297,7 +170,6 @@ const App = () => {
     boardRef.current = Array(boardSize).fill(0).map(() => Array(boardSize).fill(0));
     energyRef.current = { player: 100, ai: 100 };
     captureRef.current = { player: 0, ai: 0 };
-    lastAudioRef.current = { outOfEnergy: false, ready: true };
     setWinner(null);
     setGameState('COUNTDOWN');
   };
@@ -307,7 +179,6 @@ const App = () => {
     clearInterval(aiLoopRef.current);
     setWinner(reason);
     setGameState('GAMEOVER');
-    triggerAudio(reason.startsWith('PLAYER') ? 'VICTORY' : 'DEFEAT');
   };
 
   useEffect(() => {
@@ -372,13 +243,6 @@ const App = () => {
         <div className="absolute inset-0 pointer-events-none opacity-20">
             <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,#0ea5e9,transparent_50%)] animate-pulse" />
         </div>
-
-        <button 
-          onClick={() => setIsMuted(!isMuted)}
-          className="absolute top-6 right-6 p-3 bg-zinc-900 border border-zinc-800 rounded-full hover:bg-zinc-800 transition-colors"
-        >
-          {isMuted ? <VolumeX className="text-rose-500" /> : <Volume2 className="text-sky-500" />}
-        </button>
 
         <div className="z-10 text-center max-w-lg w-full">
           <h1 className="text-6xl font-black italic mb-2 tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-rose-500 to-sky-600">
@@ -478,13 +342,6 @@ const App = () => {
             >
                 <div className="text-xs font-bold">ENERGY SURGE</div>
                 <Zap size={14} className="text-sky-400" />
-            </button>
-
-            <button 
-                onClick={() => setIsMuted(!isMuted)}
-                className="w-full flex items-center justify-center gap-2 p-2 border border-zinc-800 rounded text-[10px] text-zinc-500 hover:text-white"
-            >
-               {isMuted ? <VolumeX size={12}/> : <Volume2 size={12}/>} {isMuted ? 'ENABLE AUDIO' : 'MUTE AUDIO'}
             </button>
         </div>
 
